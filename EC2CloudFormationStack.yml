@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creating Ec2,Security Groups and Deploying Application
+
+Parameters:
+  MySimpleStack:
+    Description: Enter Stack Name
+    Type: String
+
+Resources:
+  MyCloudFormationScurityGroupCF1:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: My react-app group
+      VpcId: 
+          Fn::ImportValue: !Sub "${MySimpleStack}-VPCID"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0      
+          FromPort: "22"
+          IpProtocol: tcp
+          ToPort: "22"
+        - FromPort: "3000"          
+          ToPort: "3000"             
+          IpProtocol: tcp 
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: MyCloudFormationSG1
+  MyFirstEc2FromCF1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0f767afb799f45102
+      InstanceType: t2.micro
+      Monitoring: true
+      SubnetId: 
+          Fn::ImportValue: !Sub "${MySimpleStack}-SUBNETID1"
+      SecurityGroupIds:
+        - !Ref MyCloudFormationScurityGroupCF1
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        # put your script here
+      Tags:
+        - Key: Name
+          Value: MyFirstInstanceCF1
+  MySecondEc2CF2:
+    Type: AWS::EC2::Instance
+    Properties:
+      DisableApiTermination: true 
+      ImageId: ami-0f767afb799f45102
+      InstanceType: t2.micro
+      Monitoring: true
+      SubnetID:
+          
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub "${MySimpleStack}-SUBNETID2"
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        # put your script here
+      Tags:
+        - Key: key
+          Value: value
+  

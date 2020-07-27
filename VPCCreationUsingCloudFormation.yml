@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: My VPC Template
+
+Parameters:
+  MyVPCCIDER:
+    Description: This is my vpc id
+    Type: String
+    Default: 10.40.0.0/16
+  MySubnet1Cider:
+    Description: Subnet Cider CidrBlock
+    Type: String
+    Default: 10.40.30.0/24
+  MySubnet2Cider:
+    Description: Subnet Cider CidrBlock
+    Type: String
+    Default: 10.40.40.0/24
+  Subnet1AZs:
+    Description: Select Subnet
+    Type: AWS::EC2::AvailabilityZone::Name
+  Subnet2AZs:
+      Description: Select Subnet
+      Type: AWS::EC2::AvailabilityZone::Name
+ 
+
+Resources: 
+# VPC creation
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref MyVPCCIDER
+      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'false'
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: MyCloudFormationVPC
+#Subnet 1 creation-- public subnet
+  MySubnetCF1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref Subnet1AZs
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref MySubnet1Cider
+      Tags:
+        - Key: Name
+          Value: CloudFormationSubnet1
+# Subnet 2 creation --- Private Subnet
+  MySubnetCF2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: !Ref Subnet2AZs
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref MySubnet2Cider
+      Tags:
+        - Key: Name
+          Value: CloudFormationSubnet2
+#Internet Gateway creation 
+  MyVPCGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: CloudformationGateway
+#Attaching gateway to vpc
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref MyVPCGateway
+# creating Route Table ---- Public Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
+#Route Table ----Private Route Table
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+# Subnet Association for RouteTable --- Public to Subnet 1
+  AssociationForSubnetCF1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MySubnetCF1
+      RouteTableId: !Ref PublicRouteTable
+ # Subnet Association to Route Table -- Private to subnet2
+  AssociationForSubnetCF2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref MySubnetCF2
+      RouteTableId: !Ref PrivateRouteTable
+#Associating internet gateway to VPC
+  InternetGatewayRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyVPCGateway
+Outputs:
+  StackVPC:
+    Description: Export VPC ID
+    Value: !Ref myVPC
+    Export: 
+      Name: !Sub "${AWS::StackName}-VPCID"
+  StackSubnet1:
+    Description: Export Subnet1 ID
+    Value: !Ref MySubnetCF1
+    Export:
+      Name: !Sub "${AWS::StackName}-SUBNETID1"
+  StackSubnet2:
+    Description: Export Subnet2 ID
+    value: !Ref MySubnetCF2
+    Export:
+      Name: !Sub "${AWS::StackName}-SUBNETID2"
